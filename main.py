@@ -5,14 +5,19 @@ from os.path import join
 class Player(pygame.sprite.Sprite):
     def __init__(self, group):
         super().__init__(group)
-        self.image = pygame.image.load(join('images', 'player.png')).convert_alpha()
+        self.originalSurface = pygame.image.load(join('images', 'player.png')).convert_alpha()
+        self.image = self.originalSurface
         self.rect = self.image.get_frect(center=(WINDOW_WIDTH/2,WINDOW_HEIGHT - 150))
         self.direction = pygame.Vector2()
         self.speed = 300
+
         # Laser cooldown
         self.canShoot = True
         self.laserShootTime = 0
-        self.coolDownDuration = 400
+        self.coolDownDuration = 250
+
+        # Mask
+        self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, dt):
         # Update player position according to keyboard input
@@ -54,6 +59,7 @@ class Laser(pygame.sprite.Sprite):
         super().__init__(group)
         self.image = surface
         self.rect = self.image.get_frect(midbottom=pos)
+        self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, dt):
         self.rect.centery -= self.LASER_SPEED * dt
@@ -66,20 +72,31 @@ class Meteor(pygame.sprite.Sprite):
 
     def __init__(self, surface, pos, group):
         super().__init__(group)
-        self.image = surface
+        self.originalSurface = surface
+        self.image = self.originalSurface
         self.rect = self.image.get_frect(center=pos)
+        self.mask = pygame.mask.from_surface(self.image)
         self.timeCreated = pygame.time.get_ticks()
         self.direction = pygame.Vector2(uniform(-0.5,0.5), 1)
         self.speed = randint(400, 500)
+        self.rotation = 0
+        self.rotationSpeed = randint(50, 100)
 
     def update(self, dt):
         self.rect.center += self.direction * self.speed * dt
         if pygame.time.get_ticks() - self.timeCreated > self.METEOR_LIFETIME:
             self.kill()
 
+        # Continuous rotation
+        self.rotation += self.rotationSpeed * dt
+        self.image = pygame.transform.rotozoom(self.originalSurface, self.rotation, 1)
+        self.rect = self.image.get_frect(center = self.rect.center)
+        # ^ reassign the rect for the rotated surface, giving it the same center
+        #   position, to prevent wobbling as surface is rotated
+
 def collisions(currScore):
     # Check for player-meteor collisions and laser-meteor collisions
-    if pygame.sprite.spritecollide(player, meteorSprites, True):
+    if pygame.sprite.spritecollide(player, meteorSprites, True, pygame.sprite.collide_mask):
         currScore -= 5
     for laser in laserSprites:
         if pygame.sprite.spritecollide(laser, meteorSprites, True):
