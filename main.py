@@ -1,6 +1,7 @@
 import pygame
 from random import randint, uniform
 from os.path import join
+from os import listdir
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, group):
@@ -29,6 +30,7 @@ class Player(pygame.sprite.Sprite):
 
         if pygame.key.get_just_pressed()[pygame.K_SPACE] and self.canShoot:
             Laser(laserSurface, self.rect.midtop, (allSprites, laserSprites))
+            laserSound.play()
             self.canShoot = False
             self.laserShootTime = pygame.time.get_ticks()
 
@@ -94,14 +96,33 @@ class Meteor(pygame.sprite.Sprite):
         # ^ reassign the rect for the rotated surface, giving it the same center
         #   position, to prevent wobbling as surface is rotated
 
+class AnimatedExplosion(pygame.sprite.Sprite):
+    def __init__(self, frames, pos, group):
+        super().__init__(group)
+        self.frames = frames
+        self.frameIndex = 0
+        self.image = self.frames[self.frameIndex]
+        self.rect = self.image.get_frect(center = pos)
+
+    def update(self, dt):
+        self.frameIndex += 30 * dt
+        if self.frameIndex < len(self.frames):
+            self.image = self.frames[int(self.frameIndex)]
+        else:
+            self.kill()
+
 def collisions(currScore):
     # Check for player-meteor collisions and laser-meteor collisions
     if pygame.sprite.spritecollide(player, meteorSprites, True, pygame.sprite.collide_mask):
+        damageSound.play()
         currScore -= 5
     for laser in laserSprites:
         if pygame.sprite.spritecollide(laser, meteorSprites, True):
+            explosionSound.play()
             laser.kill()
             currScore += 1
+            # Explosion
+            AnimatedExplosion(explosionFrames, laser.rect.midtop, allSprites)
     return currScore
 
 def displayScore(currScore):
@@ -123,9 +144,24 @@ clock = pygame.time.Clock()
 starSurface = pygame.image.load(join('images', 'star.png')).convert_alpha()
 meteorSurface = pygame.image.load(join('images', 'meteor.png')).convert_alpha()
 laserSurface = pygame.image.load(join('images', 'laser.png'))
+explosionFrameFiles = listdir(join('images', 'explosion'))
+explosionFrames = [
+    pygame.image.load(join('images', 'explosion', f'{i}.png')).convert_alpha() for i in range(0,21)
+]
 
 # Import font
 font = pygame.font.Font(join('images', 'Oxanium-Bold.ttf'), 50)
+
+# Import sounds
+laserSound = pygame.mixer.Sound(join('audio', 'laser.wav'))
+laserSound.set_volume(0.3)
+explosionSound = pygame.mixer.Sound(join('audio', 'explosion.wav'))
+explosionSound.set_volume(0.3)
+damageSound = pygame.mixer.Sound(join('audio', 'crash.mp3'))
+damageSound.set_volume(0.5)
+gameMusic = pygame.mixer.Sound(join('audio', 'game_music.wav'))
+gameMusic.set_volume(0.2)
+gameMusic.play(loops = -1)
 
 # Sprites
 allSprites = pygame.sprite.Group()
