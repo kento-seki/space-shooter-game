@@ -77,17 +77,22 @@ class Meteor(pygame.sprite.Sprite):
         if pygame.time.get_ticks() - self.timeCreated > self.METEOR_LIFETIME:
             self.kill()
 
-def collisions():
-    global running # using global vars not  ideal, but used here for simplicity
-
+def collisions(currScore):
     # Check for player-meteor collisions and laser-meteor collisions
-    if pygame.sprite.spritecollide(player, meteorSprites, False):
-        print('player collided with meteor')
-        running = False
-
+    if pygame.sprite.spritecollide(player, meteorSprites, True):
+        currScore -= 5
     for laser in laserSprites:
         if pygame.sprite.spritecollide(laser, meteorSprites, True):
             laser.kill()
+            currScore += 1
+    return currScore
+
+def displayScore(currScore):
+    fontColour = (240, 255, 255)
+    textSurface = font.render(str(currScore), True, fontColour)
+    textRect = textSurface.get_frect(midbottom = (WINDOW_WIDTH/2, WINDOW_HEIGHT - 50))
+    pygame.draw.rect(displaySurface, fontColour, textRect.inflate(20, 20).move(0, -10), 5, 10)
+    displaySurface.blit(textSurface, textRect)
 
 # General setup
 pygame.init()
@@ -101,6 +106,9 @@ clock = pygame.time.Clock()
 starSurface = pygame.image.load(join('images', 'star.png')).convert_alpha()
 meteorSurface = pygame.image.load(join('images', 'meteor.png')).convert_alpha()
 laserSurface = pygame.image.load(join('images', 'laser.png'))
+
+# Import font
+font = pygame.font.Font(join('images', 'Oxanium-Bold.ttf'), 50)
 
 # Sprites
 allSprites = pygame.sprite.Group()
@@ -117,6 +125,7 @@ pygame.time.set_timer(meteorEvent, 500)
 #
 # Loop indefinitely, creating and displaying frames
 #
+currScore = 0
 while running:
     dt = clock.tick(120) / 1000 # returns delta time: time to render frame
 
@@ -131,11 +140,12 @@ while running:
     # Update game sprites
     allSprites.update(dt)
 
-    collisions()
+    currScore = collisions(currScore)
 
     # Draw the game and sprites
-    displaySurface.fill('darkgray')
+    displaySurface.fill('#3a2e3f')
     allSprites.draw(displaySurface)
+    displayScore(currScore)
 
     pygame.display.update()
 
