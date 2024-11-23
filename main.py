@@ -23,7 +23,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.center += self.direction * self.speed * dt
 
         if pygame.key.get_just_pressed()[pygame.K_SPACE] and self.canShoot:
-            Laser(laserSurface, self.rect.midtop, allSprites)
+            Laser(laserSurface, self.rect.midtop, (allSprites, laserSprites))
             self.canShoot = False
             self.laserShootTime = pygame.time.get_ticks()
 
@@ -77,6 +77,18 @@ class Meteor(pygame.sprite.Sprite):
         if pygame.time.get_ticks() - self.timeCreated > self.METEOR_LIFETIME:
             self.kill()
 
+def collisions():
+    global running # using global vars not  ideal, but used here for simplicity
+
+    # Check for player-meteor collisions and laser-meteor collisions
+    if pygame.sprite.spritecollide(player, meteorSprites, False):
+        print('player collided with meteor')
+        running = False
+
+    for laser in laserSprites:
+        if pygame.sprite.spritecollide(laser, meteorSprites, True):
+            laser.kill()
+
 # General setup
 pygame.init()
 WINDOW_WIDTH, WINDOW_HEIGHT = 1280, 720
@@ -92,6 +104,8 @@ laserSurface = pygame.image.load(join('images', 'laser.png'))
 
 # Sprites
 allSprites = pygame.sprite.Group()
+meteorSprites = pygame.sprite.Group()
+laserSprites = pygame.sprite.Group()
 for i in range(20):
     star = Star(allSprites, starSurface)
 player = Player(allSprites)
@@ -112,17 +126,12 @@ while running:
             running = False
         if event.type == meteorEvent:
             x, y = randint(0,WINDOW_WIDTH), randint(-200,-100)
-            Meteor(meteorSurface, (x,y), allSprites)
-        #
-        # Handling inputs via the event loop - possible, but not recommended
-        #
-        # if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
-        #     print('1 was pressed')
-        # if event.type == pygame.MOUSEMOTION:
-        #     playerRect.center = event.pos
+            Meteor(meteorSurface, (x,y), (allSprites, meteorSprites))
 
     # Update game sprites
     allSprites.update(dt)
+
+    collisions()
 
     # Draw the game and sprites
     displaySurface.fill('darkgray')
